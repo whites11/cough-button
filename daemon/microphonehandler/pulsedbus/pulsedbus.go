@@ -117,43 +117,14 @@ func (p *pulsedbus) ToggleMuted() error {
 func getActiveSource(conn *dbus.Conn) (*dbus.ObjectPath, error) {
 	obj := conn.Object("org.PulseAudio.Core1", "/org/pulseaudio/core1")
 
-	sources, err := obj.GetProperty("org.PulseAudio.Core1.Sources")
+	fallbackSourcePath, err := obj.GetProperty("org.PulseAudio.Core1.FallbackSource")
 	if err != nil {
 		return nil, err
 	}
 
-	var activeSource dbus.ObjectPath
-	{
-		var activePortPrio uint32
-		for _, sourcepath := range sources.Value().([]dbus.ObjectPath) {
-			fmt.Printf("Checking source %s\n", sourcepath)
-			src := conn.Object("org.PulseAudio.Core1.Source", sourcepath)
-
-			priorityVariant, err := src.GetProperty("org.PulseAudio.Core1.Source.Priority")
-			if err != nil {
-				return nil, err
-			}
-
-			prio := priorityVariant.Value().(uint32)
-
-			descriptionVariant, err := src.GetProperty("org.PulseAudio.Core1.Device.Name")
-			if err != nil {
-				return nil, err
-			}
-
-			description := descriptionVariant.Value().(string)
-
-			fmt.Printf("  %s => %d\n", description, prio)
-
-			if !activeSource.IsValid() || prio > activePortPrio {
-				activeSource = sourcepath
-				activePortPrio = prio
-			}
-		}
-	}
-
-	if activeSource.IsValid() {
-		return &activeSource, nil
+	fallbackSource := fallbackSourcePath.Value().(dbus.ObjectPath)
+	if fallbackSource.IsValid() {
+		return &fallbackSource, nil
 	}
 
 	return nil, nil

@@ -1,10 +1,13 @@
 package serial
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
-	rfcomm "github.com/jacobsa/go-serial/serial"
+	rfcomm "github.com/3nueves/serial"
 )
 
 type serial struct {
@@ -12,22 +15,86 @@ type serial struct {
 }
 
 func New() (*serial, error) {
-	options := rfcomm.OpenOptions{
-		PortName:        "/dev/ttyACM0",
-		BaudRate:        38400,
-		DataBits:        8,
-		StopBits:        1,
-		MinimumReadSize: 4,
+	devices := []string{
+		"/dev/ttyACM0",
+		"/dev/ttyACM1",
 	}
 
-	port, err := rfcomm.Open(options)
-	if err != nil {
-		return nil, err
+	bauds := []int{
+		//57600,
+		38400,
+		//19200,
+		//9600,
+		//115200,
 	}
 
-	return &serial{
-		port: port,
-	}, nil
+	for _, d := range devices {
+		for _, b := range bauds {
+			c := &rfcomm.Config{Name: d, Baud: b}
+			port, err := rfcomm.OpenPort(c)
+			if err != nil {
+				fmt.Printf("Error opening device %s\n", d)
+				continue
+			}
+
+			fmt.Printf("Probing device %s (baud %d).\n", d, b)
+
+			_ = port.Flush()
+
+			ch := make(chan bool, 10)
+			defer close(ch)
+
+			go func() {
+				buffer := make([]byte, 1024)
+				for true {
+					n, err := port.Read(buffer)
+					if err != nil {
+						panic(err)
+					}
+
+					s := string(buffer[0:n])
+
+					if strings.Trim(s, "\r\n") == "pong" {
+						ch <- true
+						return
+					} else {
+						fmt.Println(s)
+					}
+				}
+			}()
+
+			time.Sleep(3 * time.Second)
+
+			fmt.Println("Sending ping.")
+
+			_, err = port.Write([]byte("ping\n"))
+			if err != nil {
+				fmt.Println("Ping failed")
+				continue
+			}
+
+			fmt.Println("Ping sent, waiting for response.")
+			time.Sleep(5 * time.Second)
+
+			select {
+			case <-ch:
+				// Got pong response.
+			case <-time.After(time.Second * 10):
+				// report timeout
+				fmt.Println("Didn't get a ping response in time")
+				_ = port.Close()
+				continue
+			}
+
+			fmt.Printf("Found suitable device %s\n", d)
+
+			return &serial{
+				port: port,
+			}, nil
+		}
+	}
+
+	return nil, errors.New("no suitable device found")
 }
 
 func (s *serial) Cleanup() error {
@@ -35,16 +102,16 @@ func (s *serial) Cleanup() error {
 }
 
 func (s *serial) NotifyMicrophoneMutedState(muted bool) error {
-	var data byte
+	var data string
 	{
 		if muted {
-			data = 0x00
+			data = "muted\n"
 		} else {
-			data = 0x01
+			data = "unmuted\n"
 		}
 	}
 
-	_, err := s.port.Write([]byte{data})
+	_, err := s.port.Write([]byte(data))
 
 	return err
 }
@@ -61,7 +128,7 @@ func (s *serial) ListenForMuteToggleCommand(c chan<- bool) error {
 
 			s := string(buffer[0:n])
 
-			switch s {
+			switch strings.Trim(s, "\r\n") {
 			case "toggle":
 				c <- true
 			default:

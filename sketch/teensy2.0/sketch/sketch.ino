@@ -9,28 +9,37 @@ void setup() {
   digitalWrite(ledPin, LOW);
 
   // initialize serial port connection.
-  Serial.begin(38400);
+  Serial.begin(57600);
 }
 
 void loop() {
+  if (!Serial.dtr()) {
+    digitalWrite(ledPin, HIGH);
+    delay(150);
+    digitalWrite(ledPin, LOW);
+    delay(150);
+    return;
+  }
+
+  if (Serial.available()) {
+    String s = Serial.readStringUntil('\n');
+  
+    if (s == "ping") {
+        Serial.println("pong");
+    } else if (s == "muted") {
+        digitalWrite(ledPin, LOW);
+    } else if (s == "unmuted") {
+        digitalWrite(ledPin, HIGH);
+    } else if (s != "") {
+        Serial.println("Unknown command: " + s);
+    }
+  }
+    
   int pressed = digitalRead(btnPin);
 
   if (pressed == LOW) {
-    Serial.print("toggle");
-    delay(500);
-  }
-
-  if (Serial.available() > 0) {
-    // read the incoming byte:
-    byte incomingByte = Serial.read();
-
-    if (incomingByte == 0x00) {
-      // Mic is muted.
-      digitalWrite(ledPin, LOW);
-    } else {
-      // Mic is not muted.
-      digitalWrite(ledPin, HIGH);
-    }
+    Serial.println("toggle");
+    delay(100);
   }
 
   delay(100);
