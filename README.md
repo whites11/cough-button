@@ -1,6 +1,11 @@
 # Cough button
 
-This project aims at providing software support for a cheap DYI cough button for linux.
+This project aims at providing software support for a cheap (normally < 10€) DYI hardware cough button for linux.
+
+A cough button is simply a button that allows to mute and unmute a microphone attached to a linux computer.
+
+Theoretically the computer-side software provided with this repo can be easily extended/replaced to support other operating systems as well. 
+I don't care about any other operating system so I will probably never do it (but feel free to contribute).
 
 ## Diagram of the components
 
@@ -31,3 +36,15 @@ The LED of the external device is updated to reflect in near-realtime the muted 
 
 WARNING: if you are using custom settings for some applications, `cough button` will not be able to mute those applications for you. It always mutes
 the default source.
+
+## Getting started
+
+It is still early days for the project, so running it is a manual process.
+
+Hopefully my interest will in the project will continue and/or contributors will join me making it more straightforward.
+
+In any case these are the steps needed to get yourself a cough button.
+
+- Buy the hardware and connect following the connections diagram above.
+- Flash the teensy device following [the official instructions](https://www.pjrc.com/teensy/teensyduino.html).
+- Run the daemon as unprivileged user (cd into the `daemon` directory and run `go run main.go`).
