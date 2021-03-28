@@ -24,7 +24,7 @@ The daemon is a go CLI tool that has to be run from the command line as unprivil
 
 During startup, the deamon:
 
-- looks for a supported serial device to listen inputs from and to port status to
+- looks for a supported serial device to listen inputs from and to post the microphone muted status to.
 - connects to pulseaudio via DBUS, setting the mute status and getting notifications about state changes.
 
 The LED of the external device is updated to reflect in near-realtime the muted status of the default source of the system.
